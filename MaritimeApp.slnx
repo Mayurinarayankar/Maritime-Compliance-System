@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="MaritimeApp.API/MaritimeApp.API.csproj" />
+  <Project Path="MaritimeApp.Application/MaritimeApp.Application.csproj" />
+  <Project Path="MaritimeApp.Domain/MaritimeApp.Domain.csproj" />
+  <Project Path="MaritimeApp.Infrastructure/MaritimeApp.Infrastructure.csproj" />
+</Solution>
