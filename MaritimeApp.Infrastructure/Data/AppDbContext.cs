@@ -1,71 +1,110 @@
-using MaritimeApp.Application.Interfaces;
 using MaritimeApp.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace MaritimeApp.Infrastructure.Data;
 
-public class AppDbContext : DbContext, IAppDbContext
+public class AppDbContext : DbContext
 {
-    public DbSet<Ship> Ships { get; set; }
-    public DbSet<Crew> Crews { get; set; }
-    public DbSet<MaintenanceTask> Tasks { get; set; }
-    public DbSet<Drill> Drills { get; set; }
-    public DbSet<DrillParticipation> Participations { get; set; }
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
-    {
-    }
+    public DbSet<Ship> Ships => Set<Ship>();
+    public DbSet<User> Users => Set<User>();
+    public DbSet<MaintenanceTask> MaintenanceTasks => Set<MaintenanceTask>();
+    public DbSet<TaskComment> TaskComments => Set<TaskComment>();
+    public DbSet<SafetyDrill> SafetyDrills => Set<SafetyDrill>();
+    public DbSet<DrillAttendance> DrillAttendances => Set<DrillAttendance>();
 
-    // ✅ Implement interface methods
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
 
-    public async Task<List<MaintenanceTask>> GetTasksAsync()
-    {
-        return await Tasks.ToListAsync();
-    }
+        // Ship
+        modelBuilder.Entity<Ship>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).IsRequired().HasMaxLength(200);
+            e.Property(x => x.IMONumber).IsRequired().HasMaxLength(20);
+            e.HasIndex(x => x.IMONumber).IsUnique();
+        });
 
-    public async Task AddTaskAsync(MaintenanceTask task)
-    {
-        await Tasks.AddAsync(task);
-    }
+        // User
+        modelBuilder.Entity<User>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Email).IsRequired().HasMaxLength(200);
+            e.HasIndex(x => x.Email).IsUnique();
+            e.Property(x => x.FirstName).IsRequired().HasMaxLength(100);
+            e.Property(x => x.LastName).IsRequired().HasMaxLength(100);
+            e.HasOne(x => x.Ship)
+                .WithMany(s => s.CrewMembers)
+                .HasForeignKey(x => x.ShipId)
+                .OnDelete(DeleteBehavior.SetNull);
+            e.Ignore(x => x.FullName);
+        });
 
-    public async Task SaveChangesAsync()
-    {
-        await base.SaveChangesAsync();
-    }
-    public async Task<MaintenanceTask?> GetTaskByIdAsync(int id)
-    {
-        return await Tasks.FindAsync(id);
-    }
+        // MaintenanceTask
+        modelBuilder.Entity<MaintenanceTask>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Title).IsRequired().HasMaxLength(300);
+            e.HasOne(x => x.Ship)
+                .WithMany(s => s.MaintenanceTasks)
+                .HasForeignKey(x => x.ShipId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.AssignedTo)
+                .WithMany(u => u.AssignedTasks)
+                .HasForeignKey(x => x.AssignedToId)
+                .OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.CreatedBy)
+                .WithMany(u => u.CreatedTasks)
+                .HasForeignKey(x => x.CreatedById)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.Ignore(x => x.IsOverdue);
+        });
 
+        // TaskComment
+        modelBuilder.Entity<TaskComment>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasOne(x => x.Task)
+                .WithMany(t => t.Comments)
+                .HasForeignKey(x => x.TaskId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Author)
+                .WithMany(u => u.Comments)
+                .HasForeignKey(x => x.AuthorId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
 
-    // drill
-    public async Task AddDrillAsync(Drill drill)
-    {
-        await Drills.AddAsync(drill);
-    }
+        // SafetyDrill
+        modelBuilder.Entity<SafetyDrill>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Title).IsRequired().HasMaxLength(300);
+            e.HasOne(x => x.Ship)
+                .WithMany(s => s.SafetyDrills)
+                .HasForeignKey(x => x.ShipId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.CreatedBy)
+                .WithMany()
+                .HasForeignKey(x => x.CreatedById)
+                .OnDelete(DeleteBehavior.Restrict);
+            e.Ignore(x => x.IsMissed);
+        });
 
-    public async Task<List<Drill>> GetDrillsAsync()
-    {
-        return await Drills.ToListAsync();
+        // DrillAttendance
+        modelBuilder.Entity<DrillAttendance>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasOne(x => x.Drill)
+                .WithMany(d => d.Attendances)
+                .HasForeignKey(x => x.DrillId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.User)
+                .WithMany(u => u.DrillAttendances)
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.DrillId, x.UserId }).IsUnique();
+        });
     }
-
-    public async Task<Drill?> GetDrillByIdAsync(int id)
-    {
-        return await Drills.FindAsync(id);
-    }
-
-    public async Task AddParticipationAsync(DrillParticipation participation)
-    {
-        await Participations.AddAsync(participation);
-    }
-
-    public async Task<List<DrillParticipation>> GetParticipationsAsync()
-    {
-        return await Participations.ToListAsync();
-    }
-    public async Task<Ship?> GetShipByIdAsync(int id)
-    {
-        return await Ships.FirstOrDefaultAsync(x => x.Id == id);
-    }
-    
 }
