@@ -36,4 +36,36 @@ public class AppDbContext : DbContext, IAppDbContext
     {
         return await Tasks.FindAsync(id);
     }
+
+
+    // drill
+    public async Task AddDrillAsync(Drill drill)
+    {
+        await Drills.AddAsync(drill);
+    }
+
+    public async Task<List<Drill>> GetDrillsAsync()
+    {
+        return await Drills.ToListAsync();
+    }
+
+    public async Task<Drill?> GetDrillByIdAsync(int id)
+    {
+        return await Drills.FindAsync(id);
+    }
+
+    public async Task AddParticipationAsync(DrillParticipation participation)
+    {
+        await Participations.AddAsync(participation);
+    }
+
+    public async Task<List<DrillParticipation>> GetParticipationsAsync()
+    {
+        return await Participations.ToListAsync();
+    }
+    public async Task<Ship?> GetShipByIdAsync(int id)
+    {
+        return await Ships.FirstOrDefaultAsync(x => x.Id == id);
+    }
+    
 }

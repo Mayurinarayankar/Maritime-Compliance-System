@@ -12,6 +12,7 @@ builder.Services.AddScoped<IAppDbContext>(provider =>
 provider.GetRequiredService<AppDbContext>());
 
 builder.Services.AddScoped<ITaskService, TaskService>();
+builder.Services.AddScoped<IDrillService, DrillService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
